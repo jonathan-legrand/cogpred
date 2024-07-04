@@ -1,0 +1,10 @@
+# Non standard yml, to be parsed with https://github.com/mkaranasou/pyaml_env
+#DATA PATH
+data_dir: !ENV ${HOME}/data/Memento
+output_dir: !ENV ${HOME}/data/Memento/output
+bids_dir: "/georges/memento/BIDS"
+statresults: !ENV ${HOME}/data/Memento/output/statresults
+connectivity_matrices: !ENV ${HOME}/data/Memento/output/connectivity
+custom_atlases : !ENV ${HOME}/data/Memento/atlas
+
+alpha: 0.05
