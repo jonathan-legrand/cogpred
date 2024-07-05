@@ -10,6 +10,17 @@ memory = joblib.Memory(cachedir, verbose=0)
 
 @memory.cache
 def make_features(fetcher, metadata, indexer):
+    """Fetch time series corresponding to given metadata
+    and indexed regions and clean them.
+
+    Args:
+        fetcher (_type_): _description_
+        metadata (_type_): _description_
+        indexer (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     features = []
     
     for i, row in metadata.iterrows():
