@@ -88,7 +88,7 @@ metadata = pd.merge(
     suffixes=[None, "_"]
 )
 
-# Create features with sliding wiwdows
+print("Creating features with sliding wiwdows...")
 features = make_features(fetcher, metadata, dmn_indexer)
 
 X, y, centre = [], [], []
@@ -117,6 +117,9 @@ X = torch.tensor(np.stack(X, axis=0)).transpose(1, 2)
 y = torch.tensor(y)
 
 
+print("Done")
+print("Define and start grid search...")
+
 
 f1_cb = EpochScoring(macro_f1, lower_is_better=False, name="macro_f1")
 early_stopping = EarlyStopping(
@@ -140,7 +143,7 @@ net = WindowNetClassifier(
     callbacks=[f1_cb, early_stopping],
     device=1,
     warm_start=False,
-    batch_size=16,
+    batch_size=32,
     train_split=ValidSplit(cv=8)
 )
 
@@ -186,5 +189,7 @@ search.best_estimator_.save_params(f_params=run_path / "params.pkl")
 metadata.to_csv(run_path / "metadata.csv")
  # We need best hyperparameters to re-instantiate the model
 cv_results.to_csv(run_path / "cv_results.csv")
+
+print(f"Results exported to {run_path}")
 
 
