@@ -3,7 +3,7 @@ Grid search script for CNN on BOLD time series
 """
 
 import os
-import datetime
+from datetime import datetime
 from pathlib import Path
 
 import math
@@ -47,7 +47,9 @@ def fast_increase(C):
 
 # Define script constants
 WIN_SIZE = 24
+BATCH_SIZE = 512
 k=3
+N_ITER = 50
 ATLAS = "schaefer200"
 
 torch.manual_seed(1234)
@@ -66,7 +68,9 @@ run_path = make_run_path(
     experimental=True,
     atlas=ATLAS,
     winsize=WIN_SIZE,
-    stamp=str(datetime.datetime.now())[:-7]
+    batch_size=BATCH_SIZE,
+    niter=N_ITER,
+    stamp=str(datetime.now())[:-10].replace(" ", "-")
 )
 os.makedirs(run_path, exist_ok=True)
 
@@ -88,7 +92,7 @@ metadata = pd.merge(
     suffixes=[None, "_"]
 )
 
-print("Creating features with sliding wiwdows...")
+print("Creating features with sliding wiwdows", end="...")
 features = make_features(fetcher, metadata, dmn_indexer)
 
 X, y, centre = [], [], []
@@ -135,15 +139,15 @@ net = WindowNetClassifier(
     BOLDCNN,
     module__n_channels=sum(dmn_indexer),# We want 1 channel per ROI
     module__window_size=WIN_SIZE,
-    max_epochs=20, # That seems too much
+    max_epochs=25, # That seems too much
     criterion=nn.CrossEntropyLoss,
     criterion__weight=1/counts,
     optimizer=torch.optim.AdamW,
     iterator_train__shuffle=True,
     callbacks=[f1_cb, early_stopping],
-    device=1,
+    device="cuda",
     warm_start=False,
-    batch_size=32,
+    batch_size=BATCH_SIZE, # We can make it even bigger
     train_split=ValidSplit(cv=8)
 )
 
@@ -170,7 +174,7 @@ cv = gkf.split(X, y, groups=centre)
 search = RandomizedSearchCV(
     net,
     param_distributions=grid_params,
-    n_iter=10,
+    n_iter=N_ITER,
     scoring=macro_f1,
     cv=cv,
     random_state=1999,
