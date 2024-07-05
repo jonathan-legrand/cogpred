@@ -21,6 +21,24 @@ def count_parameters(model):
 
 import math
 
+def initial_bump(C):
+    """
+    Hacky hardcoding
+    """
+    if C == 46:
+        return 2 ** 8
+    else:
+        return C // 2 
+
+def slow_increase(C):
+    return math.ceil(C * 5/4)
+
+
+def fast_increase(C):
+    return C * 2
+
+
+
 def default_channel_func(C):
     """
     Hacky hardcoding
@@ -44,7 +62,7 @@ class BOLDCNN(nn.Module):
         conv_k=3,
         pool_k=2,
         pool_s=2, # Is it worth tuning?
-        channel_func=default_channel_func,
+        channel_func=initial_bump,
         dropout_rate=0.5
         
     ):

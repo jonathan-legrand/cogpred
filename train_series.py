@@ -26,30 +26,21 @@ from cogpred.loading import TSFetcher, make_training_data
 from cogpred.plotting import plot_ts
 from cogpred.features import make_features, generate_single_sub
 from cogpred.supervised import macro_f1
-from cogpred.models import WindowNetClassifier, BOLDCNN, default_channel_func, count_parameters
-
-# TODO Move to model
-def initial_bump(C):
-    """
-    Hacky hardcoding
-    """
-    if C == 46:
-        return 2 ** 8
-    else:
-        return C // 2 
-
-def slow_increase(C):
-    return math.ceil(C * 5/4)
-
-
-def fast_increase(C):
-    return C * 2
+from cogpred.models import (
+    WindowNetClassifier,
+    BOLDCNN, 
+    default_channel_func,
+    fast_increase,
+    slow_increase,
+    initial_bump,
+    count_parameters
+)
 
 # Define script constants
-WIN_SIZE = 24
+WIN_SIZE = 48
 BATCH_SIZE = 512
 k=3
-N_ITER = 50
+N_ITER = 10
 ATLAS = "schaefer200"
 
 torch.manual_seed(1234)
@@ -68,7 +59,7 @@ run_path = make_run_path(
     experimental=True,
     atlas=ATLAS,
     winsize=WIN_SIZE,
-    batch_size=BATCH_SIZE,
+    batchsize=BATCH_SIZE,
     niter=N_ITER,
     stamp=str(datetime.now())[:-10].replace(" ", "-")
 )
@@ -151,17 +142,17 @@ net = WindowNetClassifier(
     train_split=ValidSplit(cv=8)
 )
 
+# TODO Allow single n_filters
 grid_params = dict(
-    #module__num_conv_blocks=[1, 2, 3, 4],
     module__num_conv_blocks=[1, 2, 3, 4],
-    #module__num_fc_blocks=[1, 2, 3],
+    module__num_fc_blocks=[1, 2, 3],
     #module__conv_k=[3, 5, 7],
-    module__channel_func=(
-        default_channel_func,
-        initial_bump,
-        slow_increase,
-        fast_increase
-    ),
+    #module__channel_func=(
+    #    default_channel_func,
+    #    initial_bump,
+    #    slow_increase,
+    #    fast_increase
+    #),
     optimizer__lr=np.geomspace(1e-5, 0.1, num=5),
     optimizer__weight_decay=np.geomspace(1e-5, 0.1, num=5)
 )
