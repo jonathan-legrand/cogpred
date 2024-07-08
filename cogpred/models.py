@@ -49,6 +49,9 @@ def default_channel_func(C):
         return 184
     else:
         return math.floor(C * 3 / 4)
+
+def constant_channels(C):
+    return C
     
 
 class BOLDCNN(nn.Module):
@@ -62,7 +65,7 @@ class BOLDCNN(nn.Module):
         conv_k=3,
         pool_k=2,
         pool_s=2, # Is it worth tuning?
-        channel_func=initial_bump,
+        channel_func=constant_channels,
         dropout_rate=0.5
         
     ):
