@@ -28,7 +28,8 @@ from cogpred.features import make_features, generate_single_sub
 from cogpred.supervised import macro_f1
 from cogpred.models import (
     WindowNetClassifier,
-    BOLDCNN, 
+    BOLDCNN,
+    constant_channels, 
     default_channel_func,
     fast_increase,
     slow_increase,
@@ -37,7 +38,8 @@ from cogpred.models import (
 )
 
 # Define script constants
-WIN_SIZE = 48
+# TODO batch size in CV?
+WIN_SIZE = 96
 BATCH_SIZE = 512
 k=3
 N_ITER = 10
@@ -95,7 +97,7 @@ for idx, X_i in enumerate(features):
     
     # Augment underepresented cases with smaller stride
     if y_i in {1, 2}:
-        win_kwargs = dict(stride=2)
+        win_kwargs = dict(stride=1)
     else:
         win_kwargs = dict(stride=4)
 
@@ -139,20 +141,24 @@ net = WindowNetClassifier(
     device="cuda",
     warm_start=False,
     batch_size=BATCH_SIZE, # We can make it even bigger
-    train_split=ValidSplit(cv=8)
+    train_split=ValidSplit(cv=8),
+    #optimizer__lr=10e-4,
+    #optimizer__weight_decay=10e-3
+    
 )
 
 # TODO Allow single n_filters
 grid_params = dict(
     module__num_conv_blocks=[1, 2, 3, 4],
-    module__num_fc_blocks=[1, 2, 3],
+    #module__num_fc_blocks=[1, 2, 3],
     #module__conv_k=[3, 5, 7],
-    #module__channel_func=(
-    #    default_channel_func,
-    #    initial_bump,
-    #    slow_increase,
-    #    fast_increase
-    #),
+    module__channel_func=(
+        default_channel_func,
+        initial_bump,
+        slow_increase,
+        fast_increase,
+        constant_channels
+    ),
     optimizer__lr=np.geomspace(1e-5, 0.1, num=5),
     optimizer__weight_decay=np.geomspace(1e-5, 0.1, num=5)
 )
