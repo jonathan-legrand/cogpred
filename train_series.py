@@ -17,8 +17,8 @@ import seaborn as sns
 from neuroginius.atlas import Atlas
 from skorch.callbacks import EpochScoring, EarlyStopping
 from skorch.dataset import ValidSplit
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.model_selection import GroupShuffleSplit, cross_val_score
+from sklearn.model_selection import RandomizedSearchCV, StratifiedGroupKFold
+from skopt import BayesSearchCV
 
 from cogpred.utils.configuration import get_config
 from cogpred.utils.naming import make_run_path
@@ -40,9 +40,9 @@ from cogpred.models import (
 # Define script constants
 # TODO batch size in CV?
 WIN_SIZE = 96
-BATCH_SIZE = 512
+BATCH_SIZE = "crossval"
 k=3
-N_ITER = 10
+N_ITER = 100
 ATLAS = "schaefer200"
 
 torch.manual_seed(1234)
@@ -132,7 +132,7 @@ net = WindowNetClassifier(
     BOLDCNN,
     module__n_channels=sum(dmn_indexer),# We want 1 channel per ROI
     module__window_size=WIN_SIZE,
-    max_epochs=25, # That seems too much
+    max_epochs=30,
     criterion=nn.CrossEntropyLoss,
     criterion__weight=1/counts,
     optimizer=torch.optim.AdamW,
@@ -140,43 +140,63 @@ net = WindowNetClassifier(
     callbacks=[f1_cb, early_stopping],
     device="cuda",
     warm_start=False,
-    batch_size=BATCH_SIZE, # We can make it even bigger
+    #batch_size=BATCH_SIZE, # We can make it even bigger
     train_split=ValidSplit(cv=8),
     #optimizer__lr=10e-4,
     #optimizer__weight_decay=10e-3
     
 )
 
-# TODO Allow single n_filters
+from skopt.space import Integer, Real, Categorical
+
+#grid_params = dict(
+#    module__num_conv_blocks=[1, 2, 3, 4],
+#    #module__num_fc_blocks=[1, 2, 3],
+#    #module__conv_k=[3, 5, 7],
+#    module__channel_func=(
+#        default_channel_func,
+#        initial_bump,
+#        slow_increase,
+#        fast_increase,
+#        constant_channels
+#    ),
+#    optimizer__lr=np.geomspace(1e-5, 0.1, num=5),
+#    optimizer__weight_decay=np.geomspace(1e-5, 0.1, num=5)
+#)
 grid_params = dict(
-    module__num_conv_blocks=[1, 2, 3, 4],
+    module__num_conv_blocks=Integer(1, 5),
     #module__num_fc_blocks=[1, 2, 3],
     #module__conv_k=[3, 5, 7],
-    module__channel_func=(
+    module__channel_func=Categorical([
         default_channel_func,
         initial_bump,
         slow_increase,
         fast_increase,
-        constant_channels
+        constant_channels]
     ),
-    optimizer__lr=np.geomspace(1e-5, 0.1, num=5),
-    optimizer__weight_decay=np.geomspace(1e-5, 0.1, num=5)
+    optimizer__lr=Real(1e-5, 0.1, prior="log-uniform"),
+    optimizer__weight_decay=Real(1e-5, 0.1, prior="log-uniform"),
+    batch_size=Integer(2, 1024, prior="log-uniform", base=2)
 )
 # We can't have deep networks with higher pool_k
 # We could try having another dict of shallow confs
 
-gkf = GroupShuffleSplit(n_splits=5, random_state=1999)
+# TODO StratifiedGroupKFold
+gkf = StratifiedGroupKFold(
+    n_splits=5, shuffle=True, random_state=1999
+)
 cv = gkf.split(X, y, groups=centre)
 
-search = RandomizedSearchCV(
+search = BayesSearchCV(
     net,
-    param_distributions=grid_params,
+    grid_params,
     n_iter=N_ITER,
     scoring=macro_f1,
     cv=cv,
     random_state=1999,
     verbose=1,
     n_jobs=8,
+    n_points=8,
     error_score=np.nan, # There will be errors due to invalid architectures
     refit=True,
 )
