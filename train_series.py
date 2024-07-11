@@ -37,12 +37,13 @@ from cogpred.models import (
     count_parameters
 )
 
-# Define script constants
-# TODO batch size in CV?
-WIN_SIZE = 96
-BATCH_SIZE = "crossval"
-k=3
-N_ITER = 100
+# Define script constants 
+# TODO Pass as command line arguments to avoid modifying the script ?
+# TODO All brain smaller atlas? Or maybe Limbic and interactions only?
+WIN_SIZE = 128
+BATCH_SIZE = 512
+k = 3
+N_ITER = 20
 ATLAS = "schaefer200"
 
 torch.manual_seed(1234)
@@ -71,7 +72,8 @@ tspath = Path("/georges/memento/BIDS/derivatives/schaeffer200_merged_phenotypes"
 atlas = Atlas.from_name("schaefer200")
 fetcher = TSFetcher(tspath)
 
-dmn_indexer = np.where(np.array(atlas.macro_labels) == "Default", True, False)
+net_indexer = np.where(np.array(atlas.macro_labels) == "SomMot", True, False)
+net_indexer += np.where(np.array(atlas.macro_labels) == "Limbic", True, False)
 
 _, metadata = make_training_data(conn_dir, atlas.name, k)
 rest_dataset = fetcher.rest_dataset
@@ -86,7 +88,7 @@ metadata = pd.merge(
 )
 
 print("Creating features with sliding wiwdows", end="...")
-features = make_features(fetcher, metadata, dmn_indexer)
+features = make_features(fetcher, metadata, net_indexer)
 
 X, y, centre = [], [], []
 
@@ -130,7 +132,7 @@ counts = y.unique(return_counts=True)[1]
 
 net = WindowNetClassifier(
     BOLDCNN,
-    module__n_channels=sum(dmn_indexer),# We want 1 channel per ROI
+    module__n_channels=sum(net_indexer),# We want 1 channel per ROI
     module__window_size=WIN_SIZE,
     max_epochs=30,
     criterion=nn.CrossEntropyLoss,
@@ -140,7 +142,7 @@ net = WindowNetClassifier(
     callbacks=[f1_cb, early_stopping],
     device="cuda",
     warm_start=False,
-    #batch_size=BATCH_SIZE, # We can make it even bigger
+    batch_size=BATCH_SIZE, # We can make it even bigger
     train_split=ValidSplit(cv=8),
     #optimizer__lr=10e-4,
     #optimizer__weight_decay=10e-3
@@ -176,7 +178,7 @@ grid_params = dict(
     ),
     optimizer__lr=Real(1e-5, 0.1, prior="log-uniform"),
     optimizer__weight_decay=Real(1e-5, 0.1, prior="log-uniform"),
-    batch_size=Integer(2, 1024, prior="log-uniform", base=2)
+    #batch_size=Integer(2, 1024, prior="log-uniform", base=2)
 )
 # We can't have deep networks with higher pool_k
 # We could try having another dict of shallow confs
