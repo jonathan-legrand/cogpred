@@ -5,6 +5,7 @@ Grid search script for CNN on BOLD time series
 import os
 from datetime import datetime
 from pathlib import Path
+import json
 
 import math
 import pandas as pd
@@ -43,7 +44,7 @@ from cogpred.models import (
 WIN_SIZE = 128
 BATCH_SIZE = 512
 k = 3
-N_ITER = 20
+N_ITER = 5
 ATLAS = "schaefer200"
 
 torch.manual_seed(1234)
@@ -209,6 +210,10 @@ cv_results = pd.DataFrame(search.cv_results_).sort_values(by="rank_test_score")
 
 # Export results
 search.best_estimator_.save_params(f_params=run_path / "params.pkl")
+best_params = search.best_params_
+best_params["module__channel_func"] = str(best_params["module__channel_func"]).split(" ")[1]
+with open(run_path / "architecture.json", "w") as file:
+    json.dump(best_params, file)
 metadata.to_csv(run_path / "metadata.csv")
  # We need best hyperparameters to re-instantiate the model
 cv_results.to_csv(run_path / "cv_results.csv")
