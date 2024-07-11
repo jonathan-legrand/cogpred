@@ -167,7 +167,7 @@ from skopt.space import Integer, Real, Categorical
 #    optimizer__weight_decay=np.geomspace(1e-5, 0.1, num=5)
 #)
 grid_params = dict(
-    module__num_conv_blocks=Integer(1, 5),
+    module__num_conv_blocks=Integer(1, 4),
     #module__num_fc_blocks=[1, 2, 3],
     #module__conv_k=[3, 5, 7],
     module__channel_func=Categorical([
@@ -184,7 +184,6 @@ grid_params = dict(
 # We can't have deep networks with higher pool_k
 # We could try having another dict of shallow confs
 
-# TODO StratifiedGroupKFold
 gkf = StratifiedGroupKFold(
     n_splits=5, shuffle=True, random_state=1999
 )
