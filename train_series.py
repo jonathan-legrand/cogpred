@@ -41,10 +41,10 @@ from cogpred.models import (
 # Define script constants 
 # TODO Pass as command line arguments to avoid modifying the script ?
 # TODO All brain smaller atlas? Or maybe Limbic and interactions only?
-WIN_SIZE = 128
+WIN_SIZE = 24
 BATCH_SIZE = 512
 k = 3
-N_ITER = 5
+N_ITER = 50
 ATLAS = "schaefer200"
 
 torch.manual_seed(1234)
