@@ -19,10 +19,31 @@ def _transform(matrices, vec_idx):
         X = np.stack(X)
         return X
 
-# TODO Accept list of interactions?
+@mem.cache
+def _make_topology(refnet, interaction, macro_labels):
+
+    n_regions = len(macro_labels)
+    topology_ = np.zeros((n_regions, n_regions))
+
+    for net_a in refnet:
+        topology_ += generate_topology(net_a, macro_labels)
+        for net_b in interaction:
+            topology_ += generate_topology_net_interaction(
+                (net_a, net_b), macro_labels
+            )
+
+    topology_ = np.where(topology_ != 0, 1, 0)
+    vectop = sym_matrix_to_vec(topology_, discard_diagonal=True)
+    vec_idx_ = np.nonzero(vectop)[0]
+
+    return topology_, vec_idx_
+    
+
+from typing import Iterable
+
 # TODO Inverse transform to show full matrix
 class MatrixMasker(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
-    def __init__(self, refnet:str, interaction:str, atlas:Atlas=None):
+    def __init__(self, refnet:Iterable, interaction:Iterable, atlas:Atlas=None):
         if atlas is None:
             atlas = Atlas.from_name("schaefer200")
         self.atlas = atlas
@@ -30,13 +51,12 @@ class MatrixMasker(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         self.interaction = interaction
 
     def fit(self, matrices, y=None):
-        topology_ = generate_topology(self.refnet, self.atlas.macro_labels)
-        topology_ += generate_topology_net_interaction(
-            (self.refnet, self.interaction), self.atlas.macro_labels
+
+        self.n_regions_ = matrices.shape[1]
+
+        self.topology_, self.vec_idx_ = _make_topology(
+            self.refnet, self.interaction, self.atlas.macro_labels
         )
-        self.topology_ = np.where(topology_ != 0, 1, 0)
-        vectop = sym_matrix_to_vec(self.topology_, discard_diagonal=True)
-        self.vec_idx_ = np.nonzero(vectop)[0]
 
         return self
 
@@ -45,7 +65,7 @@ class MatrixMasker(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
     def plot(self, **kwargs):
         check_is_fitted(self)
-        axes = plot_matrix(self.topology_, self.atlas, bounds=(0, 1), **kwargs)
+        axes = plot_matrix(self.topology_, self.atlas, **kwargs)
         axes.set_title(f"MatrixMasker, {self.refnet}-{self.interaction}")
         return axes
         
