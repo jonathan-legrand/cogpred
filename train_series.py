@@ -41,8 +41,8 @@ from cogpred.models import (
 # Define script constants 
 # TODO Pass as command line arguments to avoid modifying the script ?
 # TODO All brain smaller atlas? Or maybe Limbic and interactions only?
-WIN_SIZE = 24
-BATCH_SIZE = 512
+WIN_SIZE = 96
+BATCH_SIZE = 128
 k = 3
 N_ITER = 50
 ATLAS = "schaefer200"
@@ -73,8 +73,9 @@ tspath = Path("/georges/memento/BIDS/derivatives/schaeffer200_merged_phenotypes"
 atlas = Atlas.from_name("schaefer200")
 fetcher = TSFetcher(tspath)
 
-net_indexer = np.where(np.array(atlas.macro_labels) == "SomMot", True, False)
-net_indexer += np.where(np.array(atlas.macro_labels) == "Limbic", True, False)
+#net_indexer = np.where(np.array(atlas.macro_labels) == "SomMot", True, False)
+#net_indexer += np.where(np.array(atlas.macro_labels) == "Limbic", True, False)
+net_indexer = np.full((len(atlas.macro_labels)), True) # All brain
 
 _, metadata = make_training_data(conn_dir, atlas.name, k)
 rest_dataset = fetcher.rest_dataset
@@ -167,8 +168,8 @@ from skopt.space import Integer, Real, Categorical
 #    optimizer__weight_decay=np.geomspace(1e-5, 0.1, num=5)
 #)
 grid_params = dict(
-    module__num_conv_blocks=Integer(1, 4),
-    #module__num_fc_blocks=[1, 2, 3],
+    module__num_conv_blocks=Integer(1, 5),
+    module__num_fc_blocks=Integer(1, 2),
     #module__conv_k=[3, 5, 7],
     module__channel_func=Categorical([
         default_channel_func,
