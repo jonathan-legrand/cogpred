@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 # Lazy copy paste
-def make_test_data(conn_dir:str, atlas:str, k:int, test_centre:str="RXE"):
+def make_test_data(conn_dir:str, atlas:str, k:int, test_centre:str="GOX"):
     matrices = joblib.load(f"{conn_dir}/atlas-{atlas}_prediction/all_subs.joblib")
     metadata = pd.read_csv(f"{conn_dir}/atlas-{atlas}_prediction/balanced_all_subs.csv", index_col=0)
     labels = pd.read_csv(f"data/cluster_{k}_labels.csv", index_col=0)
@@ -35,7 +35,7 @@ def make_test_data(conn_dir:str, atlas:str, k:int, test_centre:str="RXE"):
 
     return matrices, metadata
 
-def make_training_data(conn_dir, atlas, k, test_centre="RXE"):
+def make_training_data(conn_dir, atlas, k, test_centre="GOX"):
     matrices = joblib.load(f"{conn_dir}/atlas-{atlas}_prediction/all_subs.joblib")
     metadata = pd.read_csv(f"{conn_dir}/atlas-{atlas}_prediction/balanced_all_subs.csv", index_col=0)
     labels = pd.read_csv(f"data/cluster_{k}_labels.csv", index_col=0)
