@@ -41,10 +41,11 @@ from cogpred.models import (
 # Define script constants 
 # TODO Pass as command line arguments to avoid modifying the script ?
 # TODO All brain smaller atlas? Or maybe Limbic and interactions only?
-WIN_SIZE = 96
-BATCH_SIZE = 128
+# TODO Augment majority class just as hard
+WIN_SIZE = 36
+BATCH_SIZE = 64
 k = 3
-N_ITER = 50
+N_ITER = 10
 ATLAS = "schaefer200"
 
 torch.manual_seed(1234)
@@ -73,9 +74,10 @@ tspath = Path("/georges/memento/BIDS/derivatives/schaeffer200_merged_phenotypes"
 atlas = Atlas.from_name("schaefer200")
 fetcher = TSFetcher(tspath)
 
-#net_indexer = np.where(np.array(atlas.macro_labels) == "SomMot", True, False)
+net_indexer = np.where(np.array(atlas.macro_labels) == "Default", True, False)
+#net_indexer += np.where(np.array(atlas.macro_labels) == "SomMot", True, False)
 #net_indexer += np.where(np.array(atlas.macro_labels) == "Limbic", True, False)
-net_indexer = np.full((len(atlas.macro_labels)), True) # All brain
+#net_indexer = np.full((len(atlas.macro_labels)), True) # All brain
 
 _, metadata = make_training_data(conn_dir, atlas.name, k)
 rest_dataset = fetcher.rest_dataset
@@ -101,9 +103,9 @@ for idx, X_i in enumerate(features):
     
     # Augment underepresented cases with smaller stride
     if y_i in {1, 2}:
-        win_kwargs = dict(stride=1)
+        win_kwargs = dict(stride=WIN_SIZE // 16)
     else:
-        win_kwargs = dict(stride=4)
+        win_kwargs = dict(stride=WIN_SIZE // 2)
 
     win_kwargs["window_size"] = WIN_SIZE
         
@@ -182,8 +184,6 @@ grid_params = dict(
     optimizer__weight_decay=Real(1e-5, 0.1, prior="log-uniform"),
     #batch_size=Integer(2, 1024, prior="log-uniform", base=2)
 )
-# We can't have deep networks with higher pool_k
-# We could try having another dict of shallow confs
 
 gkf = StratifiedGroupKFold(
     n_splits=5, shuffle=True, random_state=1999
