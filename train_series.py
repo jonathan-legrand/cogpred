@@ -42,7 +42,7 @@ from cogpred.models import (
 # TODO All brain smaller atlas? Or maybe Limbic and interactions only?
 # TODO Augment majority class just as hard
 # TODO Robust scaling?
-WIN_SIZE = 36
+WIN_SIZE = 24
 BATCH_SIZE = 64
 k = 3
 N_ITER = 10
@@ -177,7 +177,7 @@ from skopt.space import Integer, Real, Categorical
 #    optimizer__weight_decay=np.geomspace(1e-5, 0.1, num=5)
 #)
 grid_params = dict(
-    module__num_conv_blocks=Integer(1, 5),
+    module__num_conv_blocks=Integer(1, 4),
     module__num_fc_blocks=Integer(1, 2),
     #module__conv_k=[3, 5, 7],
     module__channel_func=Categorical([
