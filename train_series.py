@@ -46,7 +46,7 @@ WIN_SIZE = 24
 BATCH_SIZE = 64
 k = 3
 N_ITER = 10
-ATLAS = "ncomponents-80_nregions-266"
+ATLAS = "msdl"
 
 torch.manual_seed(1234)
 np.random.seed(1234)
@@ -72,11 +72,12 @@ os.makedirs(run_path, exist_ok=True)
 
 # TODO That was a nasty bug, retry msdl
 tspath = Path(f"/georges/memento/BIDS/derivatives/{ATLAS}_merged_phenotypes")
-atlas = Atlas.from_name(ATLAS)
-if atlas.name == "ncomponents-80_nregions-266":
-    print("Setting trivial networks attribute")
-    atlas.networks = atlas.labels
-    
+try:
+    atlas = Atlas.from_name(ATLAS)
+except KeyError:
+    i_path = Path(config["parcellations"]) / ATLAS
+    atlas = Atlas.from_path(i_path)
+
 fetcher = TSFetcher(tspath)
 
 #net_indexer = np.where(np.array(atlas.macro_labels) == "Default", True, False)
@@ -123,7 +124,8 @@ for idx, X_i in enumerate(features):
     centre += [centre_i] * len(targets_i)
 
 
-X = torch.tensor(np.stack(X, axis=0)).transpose(1, 2)
+X = torch.tensor(np.stack(X, axis=0), dtype=torch.float32).transpose(1, 2)
+print(X.dtype)
 y = torch.tensor(y)
 
 
