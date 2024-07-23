@@ -28,7 +28,7 @@ clean_kwargs = {
     "clean__strategy": ["high_pass", "wm_csf", "motion", "global_signal"]
 }
 
-N_COMPONENTS = 80
+N_COMPONENTS = 30
 
 mask = MultiNiftiMasker(
     smoothing_fwhm=6.0,
