@@ -2,6 +2,8 @@
 from pathlib import Path
 import os
 import nibabel as nib
+import pandas as pd
+from  joblib import dump
 import matplotlib.pyplot as plt
 
 from nilearn.signal import clean
@@ -30,7 +32,7 @@ N_COMPONENTS = 80
 
 mask = MultiNiftiMasker(
     smoothing_fwhm=6.0,
-    mask_strategy="whole-brain-template",
+    mask_strategy="epi", # TODO Limit to EPI?
     standardize="zscore_sample",
     n_jobs=10,
     verbose=1,
@@ -39,7 +41,6 @@ mask = MultiNiftiMasker(
 )
 
 dict_learning = DictLearning(
-    #n_components=80,
     n_components=N_COMPONENTS, # Debug config
     mask=mask,
     memory="nilearn_cache",
@@ -58,7 +59,7 @@ extractor = RegionExtractor(
 )
 extractor.fit()
 regions_extracted_img = extractor.regions_img_
-regions_index = extractor.index_
+regions_index = pd.Series(extractor.index_)
 n_regions_extracted = regions_extracted_img.shape[-1]
 
 
@@ -69,8 +70,10 @@ run_path = Path(config["output_dir"]) / "parcellations" / make_run_name(
 os.makedirs(run_path, exist_ok=True)
 
 nib.save(regions_extracted_img, run_path / "parcellation.nii.gz")
+regions_index.to_csv(run_path / "networks.csv")
 
 plot_prob_atlas(
     regions_extracted_img, view_type="filled_contours"
 )
 plt.savefig(run_path / "parcellation.png")
+print(f"Run saved in {run_path}")
