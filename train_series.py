@@ -13,7 +13,6 @@ import numpy as np
 import torch
 from torch import nn
 from matplotlib import pyplot as plt
-import seaborn as sns
 
 from neuroginius.atlas import Atlas
 from skorch.callbacks import EpochScoring, EarlyStopping
@@ -42,11 +41,12 @@ from cogpred.models import (
 # TODO Pass as command line arguments to avoid modifying the script ?
 # TODO All brain smaller atlas? Or maybe Limbic and interactions only?
 # TODO Augment majority class just as hard
+# TODO Robust scaling?
 WIN_SIZE = 36
 BATCH_SIZE = 64
 k = 3
 N_ITER = 10
-ATLAS = "schaefer200"
+ATLAS = "ncomponents-80_nregions-266"
 
 torch.manual_seed(1234)
 np.random.seed(1234)
@@ -70,15 +70,22 @@ run_path = make_run_path(
 )
 os.makedirs(run_path, exist_ok=True)
 
-tspath = Path("/georges/memento/BIDS/derivatives/schaeffer200_merged_phenotypes")
-atlas = Atlas.from_name("schaefer200")
+# TODO That was a nasty bug, retry msdl
+tspath = Path(f"/georges/memento/BIDS/derivatives/{ATLAS}_merged_phenotypes")
+atlas = Atlas.from_name(ATLAS)
+if atlas.name == "ncomponents-80_nregions-266":
+    print("Setting trivial networks attribute")
+    atlas.networks = atlas.labels
+    
 fetcher = TSFetcher(tspath)
 
-net_indexer = np.where(np.array(atlas.macro_labels) == "Default", True, False)
+#net_indexer = np.where(np.array(atlas.macro_labels) == "Default", True, False)
 #net_indexer += np.where(np.array(atlas.macro_labels) == "SomMot", True, False)
 #net_indexer += np.where(np.array(atlas.macro_labels) == "Limbic", True, False)
-#net_indexer = np.full((len(atlas.macro_labels)), True) # All brain
+net_indexer = np.full((len(atlas.macro_labels)), True) # All brain
 
+# We use this function to make sure to only include subjects which have
+# been included in the fc based experiments
 _, metadata = make_training_data(conn_dir, atlas.name, k)
 rest_dataset = fetcher.rest_dataset
 
