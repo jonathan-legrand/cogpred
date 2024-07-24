@@ -46,7 +46,7 @@ WIN_SIZE = 24
 BATCH_SIZE = 64
 k = 3
 N_ITER = 10
-ATLAS = "msdl"
+ATLAS = "ncomponents-10_nregions-39_gsr-False"
 
 torch.manual_seed(1234)
 np.random.seed(1234)
@@ -66,7 +66,7 @@ run_path = make_run_path(
     winsize=WIN_SIZE,
     batchsize=BATCH_SIZE,
     niter=N_ITER,
-    stamp=str(datetime.now())[:-10].replace(" ", "-")
+    stamp=str(datetime.now())[:-10].replace(" ", "-"),
 )
 os.makedirs(run_path, exist_ok=True)
 
@@ -113,7 +113,7 @@ for idx, X_i in enumerate(features):
     if y_i in {1, 2}:
         win_kwargs = dict(stride=WIN_SIZE // 16)
     else:
-        win_kwargs = dict(stride=WIN_SIZE // 2)
+        win_kwargs = dict(stride=WIN_SIZE // 4)
 
     win_kwargs["window_size"] = WIN_SIZE
         
