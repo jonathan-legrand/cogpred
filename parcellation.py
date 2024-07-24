@@ -27,17 +27,18 @@ func_filenames = metadata["file_path"].sample(n=100, random_state=1234).to_list(
 # %%
 
 clean_kwargs = {
-    "clean__strategy": ["high_pass", "wm_csf", "motion"]
+    "clean__strategy": ["global_signal", "high_pass", "wm_csf", "motion"]
 }
 
-N_COMPONENTS = 10
+N_COMPONENTS = 20
 
 from nilearn.image import binarize_img, resample_to_img
-mask_img = nib.load(Path(config["data_dir"]) / "default_association-test_z_FDR_0.01.nii.gz")
-mask_img = resample_to_img(mask_img, func_filenames[0])
-mask_img = binarize_img(mask_img, 0.1, two_sided=False)
-# TODO Resample mask image to the images' resolution
-# %%
+mask_img = nib.load(Path(config["data_dir"]) / "dmn_yeo.nii.gz")
+mask_img = resample_to_img(
+    mask_img, func_filenames[0], interpolation="nearest"
+)
+#mask_img = binarize_img(mask_img, 0.1, two_sided=False)
+ # %%
 
 mask = MultiNiftiMasker(
     mask_img,
@@ -67,7 +68,7 @@ components_img_ = dict_learning.components_img_
 extractor = RegionExtractor(
 	maps_img=components_img_,
 	extractor='local_regions',
-    min_region_size=900, # in mm^3
+    min_region_size=1350, # in mm^3
 )
 extractor.fit()
 regions_extracted_img = extractor.regions_img_
@@ -82,7 +83,8 @@ plot_prob_atlas(
 run_path = Path(config["output_dir"]) / "parcellations" / make_run_name(
     ncomponents=N_COMPONENTS,
     nregions=n_regions_extracted,
-    gsr=False
+    gsr=True,
+    mask="dmnyeo"
 )
 os.makedirs(run_path, exist_ok=True)
 
