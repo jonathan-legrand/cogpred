@@ -1,7 +1,7 @@
 """
 Grid search script for CNN on BOLD time series
 """
-
+# %%
 import os
 from datetime import datetime
 from pathlib import Path
@@ -37,6 +37,7 @@ from cogpred.models import (
     count_parameters
 )
 
+
 # Define script constants 
 # TODO Pass as command line arguments to avoid modifying the script ?
 # TODO All brain smaller atlas? Or maybe Limbic and interactions only?
@@ -46,7 +47,7 @@ WIN_SIZE = 24
 BATCH_SIZE = 64
 k = 3
 N_ITER = 10
-ATLAS = "ncomponents-10_nregions-39_gsr-False"
+ATLAS = "schaefer200"
 
 torch.manual_seed(1234)
 np.random.seed(1234)
@@ -61,7 +62,6 @@ run_path = make_run_path(
     config["output_dir"],
     k=k,
     feat="series",
-    experimental=True,
     atlas=ATLAS,
     winsize=WIN_SIZE,
     batchsize=BATCH_SIZE,
@@ -76,14 +76,14 @@ try:
     atlas = Atlas.from_name(ATLAS)
 except KeyError:
     i_path = Path(config["parcellations"]) / ATLAS
-    atlas = Atlas.from_path(i_path)
+    atlas = Atlas.from_path(i_path, False)
 
 fetcher = TSFetcher(tspath)
-
-#net_indexer = np.where(np.array(atlas.macro_labels) == "Default", True, False)
+# %%
 #net_indexer += np.where(np.array(atlas.macro_labels) == "SomMot", True, False)
+#net_indexer = np.full(fetcher[0].shape[1], True) # All brain
+net_indexer = np.where(np.array(atlas.macro_labels) == "Default", True, False)
 #net_indexer += np.where(np.array(atlas.macro_labels) == "Limbic", True, False)
-net_indexer = np.full((len(atlas.macro_labels)), True) # All brain
 
 # We use this function to make sure to only include subjects which have
 # been included in the fc based experiments
@@ -101,6 +101,7 @@ metadata = pd.merge(
 
 print("Creating features with sliding wiwdows", end="...")
 features = make_features(fetcher, metadata, net_indexer)
+# %%
 
 X, y, centre = [], [], []
 
@@ -123,8 +124,9 @@ for idx, X_i in enumerate(features):
     y += targets_i
     centre += [centre_i] * len(targets_i)
 
-
+# %%
 X = torch.tensor(np.stack(X, axis=0), dtype=torch.float32).transpose(1, 2)
+# %%
 print(X.dtype)
 y = torch.tensor(y)
 
@@ -135,8 +137,8 @@ print("Define and start grid search...")
 
 f1_cb = EpochScoring(macro_f1, lower_is_better=False, name="macro_f1")
 early_stopping = EarlyStopping(
-    monitor="macro_f1",
-    lower_is_better=False,
+    monitor="valid_loss",
+    lower_is_better=True,
     patience=5,
     load_best=True
 )
