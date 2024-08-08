@@ -30,6 +30,20 @@ def init_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate empirical null distribution with permutations")
 
     parser.add_argument(
+        "refnet",
+        help="Yeo's net to use as a reference",
+        type=str,
+        default="Default"
+    )
+
+    parser.add_argument(
+        "inter",
+        help="Yeo's net to use as an interaction",
+        type=str,
+        default="Default"
+    )
+    
+    parser.add_argument(
         "--n_permutations",
         help="Number of point in the null distribution",
         type=int,
@@ -59,6 +73,8 @@ def init_argparse() -> argparse.ArgumentParser:
 
 
 def generate_null_dask(
+    refnet,
+    inter,
     matrices:np.array,
     metadata:pd.DataFrame,
     client:Client,
@@ -75,8 +91,6 @@ def generate_null_dask(
     ]
 
     atlas = Atlas.from_name(atlas_name, soft=False)
-    REFNET = np.unique(atlas.macro_labels)
-    INTER = REFNET
 
     net = SGDClassifier(
         loss="log_loss",
@@ -86,7 +100,7 @@ def generate_null_dask(
     )
     clf = Pipeline(
         [
-        ("matrixmasker", MatrixMasker(REFNET, INTER, atlas=atlas)),
+        ("matrixmasker", MatrixMasker(refnet, inter, atlas=atlas)),
         ("scaler", preprocessing.StandardScaler()),
         ("classifier", net)
         ],
@@ -94,7 +108,7 @@ def generate_null_dask(
     )
 
     def single_call(permutation):
-        p_metadata = metadata.iloc[permutation, :].reset_index(drop=True)
+        p_metadata = metadata.iloc[permutation].reset_index(drop=True)
         outer_cv = StratifiedGroupKFold(n_splits=8, shuffle=True, random_state=2024)
         test_scores, hmat = run_cv_perms(clone(clf), matrices, p_metadata, outer_cv)
         return test_scores, hmat
@@ -110,6 +124,8 @@ def generate_null_dask(
 
 
 def generate_and_export(
+    refnet,
+    inter,
     n_permutations,
     n_jobs,
     seed,
@@ -117,6 +133,10 @@ def generate_and_export(
     ):
     conn_dir = config["connectivity_matrices"]
     matrices, metadata = make_training_data(conn_dir, atlas, 3, test_centre=None)
+
+    if refnet == "all" and inter == "all":
+        refnet = np.unique(atlas.macro_labels)
+        inter = refnet
 
     with SLURMCluster(
         cores=1,
@@ -128,20 +148,30 @@ def generate_and_export(
         client = Client(cluster)
         print(client.dashboard_link)
         permuted_res, permutation_scheme = generate_null_dask(
-            matrices, metadata, client, N=n_permutations, seed=seed, atlas_name=atlas
+            refnet, inter, matrices, metadata, client, N=n_permutations, seed=seed, atlas_name=atlas
         )
-    print(permuted_res)
-    print(permutation_scheme)
 
     run_path = make_run_path(
         config["output_dir"],
         k=3,
         feat="fc",
         atlas=atlas,
+        net=refnet,
+        inter=inter
+    )
+
+    if len(run_path.name) > 55:
+        print("too long")
+        run_path = make_run_path(
+        config["output_dir"],
+        k=3,
+        feat="fc",
+        atlas=atlas,
         net="all",
     )
+    
     joblib.dump(
-        permuted_res, run_path / f"{n_permutations}_permutation_res.joblib"
+        permuted_res, run_path / f"{n_permutations}_permutations_res.joblib"
     )
     
     print(f"Permutations exported in {run_path}")
