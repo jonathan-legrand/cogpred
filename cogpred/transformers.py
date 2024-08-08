@@ -47,8 +47,16 @@ class MatrixMasker(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         if atlas is None:
             atlas = Atlas.from_name("schaefer200")
         self.atlas = atlas
-        self.refnet = refnet
-        self.interaction = interaction
+
+        if isinstance(refnet, str):
+            self.refnet = (refnet,)
+        else:
+            self.refnet = refnet
+
+        if isinstance(interaction, str):
+            self.interaction = (interaction,)
+        else:
+            self.interaction = interaction
 
     def fit(self, matrices, y=None):
 
