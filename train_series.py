@@ -67,10 +67,10 @@ run_path = make_run_path(
     batchsize=BATCH_SIZE,
     niter=N_ITER,
     stamp=str(datetime.now())[:-10].replace(" ", "-"),
+    scaling=True
 )
 os.makedirs(run_path, exist_ok=True)
 
-# TODO That was a nasty bug, retry msdl
 tspath = Path(f"/georges/memento/BIDS/derivatives/{ATLAS}_merged_phenotypes")
 try:
     atlas = Atlas.from_name(ATLAS)
