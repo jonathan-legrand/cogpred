@@ -123,7 +123,7 @@ def generate_and_export(
     with SLURMCluster(
         cores=1,
         memory="10GB",
-        walltime="00:10:00",
+        walltime="10:00:00",
         log_directory="/tmp/dask"
     ) as cluster:
         cluster.scale(n_jobs)
@@ -143,13 +143,13 @@ def generate_and_export(
         net="all",
     )
     joblib.dump(
-        run_path / permuted_res[0], "scores.joblib"
+        permuted_res[0], run_path / "scores.joblib"
     )
     joblib.dump(
-        run_path / permuted_res[1], "weights.joblib"
+        permuted_res[1], run_path / "weights.joblib"
     )
     joblib.dump(
-        run_path / permutation_scheme, "permutation_scheme.joblib"
+        permutation_scheme, run_path / "permutation_scheme.joblib"
     )
     print(f"Permutations exported in {run_path}")
     
