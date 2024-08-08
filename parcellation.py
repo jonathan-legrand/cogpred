@@ -23,21 +23,22 @@ conn_dir = config["connectivity_matrices"]
 ATLAS = "msdl" # We don't really care about the atlas
 k = 3
 _, metadata = make_training_data(conn_dir, ATLAS, k)
-func_filenames = metadata["file_path"].sample(n=100, random_state=1234).to_list()
-# %%
+func_filenames = metadata["file_path"].to_list()
 
 clean_kwargs = {
     "clean__strategy": ["global_signal", "high_pass", "wm_csf", "motion"]
 }
 
-N_COMPONENTS = 20
+N_COMPONENTS = 5
 
+# %%
 from nilearn.image import binarize_img, resample_to_img
 mask_img = nib.load(Path(config["data_dir"]) / "dmn_yeo.nii.gz")
 mask_img = resample_to_img(
     mask_img, func_filenames[0], interpolation="nearest"
 )
 #mask_img = binarize_img(mask_img, 0.1, two_sided=False)
+mask_img = None
  # %%
 
 mask = MultiNiftiMasker(
@@ -68,15 +69,19 @@ components_img_ = dict_learning.components_img_
 extractor = RegionExtractor(
 	maps_img=components_img_,
 	extractor='local_regions',
-    min_region_size=1350, # in mm^3
+    min_region_size=2000, # in mm^3
+    smoothing_fwhm=None
 )
 extractor.fit()
 regions_extracted_img = extractor.regions_img_
 regions_index = pd.Series(extractor.index_)
 n_regions_extracted = regions_extracted_img.shape[-1]
 
+# %%
 plot_prob_atlas(
-    regions_extracted_img, view_type="filled_contours"
+    regions_extracted_img,
+    view_type="filled_contours",
+    cmap="Paired"
 )
 
 #%%
@@ -84,7 +89,8 @@ run_path = Path(config["output_dir"]) / "parcellations" / make_run_name(
     ncomponents=N_COMPONENTS,
     nregions=n_regions_extracted,
     gsr=True,
-    mask="dmnyeo"
+    mask="dmnyeo",
+    nsubs=len(func_filenames)
 )
 os.makedirs(run_path, exist_ok=True)
 
