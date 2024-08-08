@@ -9,3 +9,4 @@ custom_atlases : !ENV ${HOME}/data/Memento/atlas
 parcellations : !ENV ${HOME}/data/Memento/output/parcellations
 
 alpha: 0.05
+seed: 1234
