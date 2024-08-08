@@ -5,6 +5,38 @@ from cogpred.matrices import compute_mat_size
 
 from sklearn.metrics import make_scorer, f1_score, confusion_matrix
 
+def run_cv_perms(estimator, matrices, metadata, cv):
+    y = metadata.cluster_label.values.astype(int)
+    scores = []
+    maps = []
+
+    for train_idx, test_idx in cv.split(matrices, y, groups=metadata.CEN_ANOM.values):
+        X_train, y_train = matrices[train_idx], y[train_idx]
+        X_test, y_test = matrices[test_idx], y[test_idx]
+        estimator.fit(X_train, y_train)
+
+        y_pred = estimator.predict(X_test)
+
+        scores.append(
+            f1_score(y_test, y_pred, average="macro")
+        )
+
+        reg = estimator.named_steps["classifier"]
+        
+        # This should be moved outisde the loop
+        masker = estimator.named_steps["matrixmasker"]
+
+        # Compute Haufe's transform to make coefs interpretable
+        X = masker.transform(matrices)
+        sigma_X = np.cov(X.T)
+        W = reg.coef_.T
+        patterns = sigma_X @ W
+
+        maps.append(patterns)
+    
+    weights = np.stack(maps, axis=0)
+    return scores, weights
+
 # TODO Joblib that, I suppose there should be some very similar code in cross validate
 # TODO Allow passing index to shuffle
 def run_cv(estimator, matrices, metadata, cv):
