@@ -94,11 +94,9 @@ def generate_null_dask(
     )
 
     def single_call(permutation):
-        p_matrices = matrices[permutation]
         p_metadata = metadata.iloc[permutation, :].reset_index(drop=True)
-
         outer_cv = StratifiedGroupKFold(n_splits=8, shuffle=True, random_state=2024)
-        test_scores, hmat = run_cv_perms(clone(clf), p_matrices, p_metadata, outer_cv)
+        test_scores, hmat = run_cv_perms(clone(clf), matrices, p_metadata, outer_cv)
         return test_scores, hmat
 
     
@@ -143,14 +141,9 @@ def generate_and_export(
         net="all",
     )
     joblib.dump(
-        permuted_res[0], run_path / "scores.joblib"
+        permuted_res, run_path / f"{n_permutations}_permutation_res.joblib"
     )
-    joblib.dump(
-        permuted_res[1], run_path / "weights.joblib"
-    )
-    joblib.dump(
-        permutation_scheme, run_path / "permutation_scheme.joblib"
-    )
+    
     print(f"Permutations exported in {run_path}")
     
 
