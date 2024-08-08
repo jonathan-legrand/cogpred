@@ -44,6 +44,8 @@ def make_training_data(conn_dir, atlas, k, test_centre="GOX"):
     if test_centre is not None:
         baseline_msk *= (metadata.CEN_ANOM != test_centre)
     
+    baseline_msk *= (metadata.MA != 0)
+
     metadata = metadata[baseline_msk]
     matrices = matrices[baseline_msk]
 
