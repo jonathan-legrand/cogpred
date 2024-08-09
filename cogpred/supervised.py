@@ -2,6 +2,7 @@ from scipy import stats
 import numpy as np
 from nilearn.connectome import vec_to_sym_matrix
 from cogpred.matrices import compute_mat_size
+from sklearn.metrics import classification_report
 
 from sklearn.metrics import make_scorer, f1_score, confusion_matrix
 
@@ -52,7 +53,8 @@ def run_cv(estimator, matrices, metadata, cv):
         estimator.fit(X_train, y_train)
 
         y_pred = estimator.predict(X_test)
-        cm += confusion_matrix(y_test, y_pred)
+        print(classification_report(y_test, y_pred))
+        cm += confusion_matrix(y_test, y_pred, labels=range(3))
 
         scores.append(
             f1_score(y_test, y_pred, average="macro")
