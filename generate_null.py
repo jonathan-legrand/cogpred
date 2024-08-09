@@ -17,7 +17,7 @@ from sklearn.base import clone
 from sklearn.linear_model import SGDClassifier
 from sklearn.pipeline import Pipeline
 from sklearn import preprocessing
-from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.model_selection import GroupKFold
 from cogpred.transformers import MatrixMasker
 from neuroginius.atlas import Atlas
 from dask.distributed import Client, progress
@@ -86,18 +86,22 @@ def generate_null_dask(
     random.seed(seed)
     
     idx_range = list(range(len(matrices)))
+    print("Generating permutation scheme...", end="")
     permutation_scheme = [
         random.sample(idx_range, k=len(idx_range)) for _ in range(N)
     ]
+    print("Done")
 
     atlas = Atlas.from_name(atlas_name, soft=False)
 
+    warnings.warn("Change classififier to match actual model")
     net = SGDClassifier(
         loss="log_loss",
         penalty="l1",
-        max_iter=1000,
-        random_state=1999,
+        max_iter=3000,
+        random_state=2024,
     )
+
     clf = Pipeline(
         [
         ("matrixmasker", MatrixMasker(refnet, inter, atlas=atlas)),
@@ -107,18 +111,22 @@ def generate_null_dask(
         verbose=False
     )
 
+
     def single_call(permutation):
-        p_metadata = metadata.iloc[permutation].reset_index(drop=True)
-        outer_cv = StratifiedGroupKFold(n_splits=8, shuffle=True, random_state=2024)
+        p_metadata = metadata.iloc[permutation]
+        outer_cv = GroupKFold(n_splits=8)
         test_scores, hmat = run_cv_perms(clone(clf), matrices, p_metadata, outer_cv)
         return test_scores, hmat
 
     
     print(client)
 
-    futures = client.map(single_call, permutation_scheme)
-    progress(futures, notebook=False)
-    permuted_res = [future.result() for future in futures]
+    futures = client.map(single_call, permutation_scheme, batch_size=100)
+    #progress(futures, notebook=False)
+
+    permuted_res = []
+    for future in futures:
+        permuted_res.append(future.result())
 
     return permuted_res, permutation_scheme
 
@@ -133,11 +141,13 @@ def generate_and_export(
     ):
     conn_dir = config["connectivity_matrices"]
     matrices, metadata = make_training_data(conn_dir, atlas, 3, test_centre=None)
+    metadata = metadata.loc[:, ["cluster_label", "CEN_ANOM"]]
 
     if refnet == "all" and inter == "all":
         refnet = np.unique(atlas.macro_labels)
         inter = refnet
 
+    # TODO Do we need that much memory per worker?
     with SLURMCluster(
         cores=1,
         memory="10GB",
