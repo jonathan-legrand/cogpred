@@ -76,9 +76,9 @@ def run_cv(estimator, matrices, metadata, cv):
         maps.append(patterns)
     
     hmat = np.stack(maps, axis=0)
-    hmat = vec_to_sym_matrix(
-        hmat.transpose((0, 2, 1)), diagonal=np.zeros((cv.n_splits, n_classes, n_regions))
-    )
+    #hmat = vec_to_sym_matrix(
+    #    hmat.transpose((0, 2, 1)), diagonal=np.zeros((cv.n_splits, n_classes, n_regions))
+    #)
     return scores, cm, hmat
 
 macro_f1 = make_scorer(
