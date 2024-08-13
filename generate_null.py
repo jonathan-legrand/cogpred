@@ -12,6 +12,7 @@ from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
 
 import random
+import gc
 from cogpred.supervised import run_cv_perms
 from sklearn.base import clone
 from sklearn.linear_model import SGDClassifier
@@ -72,6 +73,8 @@ def init_argparse() -> argparse.ArgumentParser:
     return parser
 
 
+from dask.distributed import as_completed
+
 def generate_null_dask(
     refnet,
     inter,
@@ -122,11 +125,12 @@ def generate_null_dask(
     print(client)
 
     futures = client.map(single_call, permutation_scheme, batch_size=100)
-    #progress(futures, notebook=False)
 
     permuted_res = []
-    for future in futures:
-        permuted_res.append(future.result())
+    for future, result in as_completed(futures, with_results=True):
+        permuted_res.append(result)
+        del future
+        client.run(gc.collect)
 
     return permuted_res, permutation_scheme
 
@@ -165,7 +169,7 @@ def generate_and_export(
         config["output_dir"],
         k=3,
         feat="fc",
-        atlas=atlas,
+        atlas=atlas.name,
         net=refnet,
         inter=inter
     )
@@ -176,7 +180,7 @@ def generate_and_export(
         config["output_dir"],
         k=3,
         feat="fc",
-        atlas=atlas,
+        atlas=atlas.name,
         net="all",
     )
     
